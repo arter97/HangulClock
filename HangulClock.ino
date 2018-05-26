@@ -22,6 +22,7 @@
 #define CDS_PIN A0
 #define CDS_THRESHOLD 50
 #define VIB_PIN 7
+#define VIB_THRESHOLD 10
 #define BRIGHTNESS_CHG_THRES 30
 #define MAX_BRIGHTNESS 200
 #define DEBUG
@@ -235,22 +236,43 @@ static void rainbowCycle(uint8_t wait) {
 
   for (j = 0; j < 256 * 5; j++) {
     for (i = 0; i < sizeof(heartLEDs) / sizeof(int); i++)
-      strip.setPixelColor(heartLEDs[i], Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+      strip.setPixelColor(heartLEDs[i], Wheel(((i * 256 / strip.numPixels()) + j) & 255, j / 2));
 
     strip.show();
     delay(wait);
   }
+
+  for (i = 0; i < LEDS; i++)
+    strip.setPixelColor(i, 0, 0, 0, 0);
+  strip.show();
 }
-static uint32_t Wheel(byte WheelPos) {
+static uint32_t Wheel(byte WheelPos, double localBrightness) {
+  byte a, b, c;
+
   if (WheelPos < 85) {
-    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+    a = WheelPos * 3;
+    b = 255 - a;
+    c = 0;
   } else if (WheelPos < 170) {
     WheelPos -= 85;
-    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    c = WheelPos * 3;
+    a = 255 - c;
+    b = 0;
   } else {
     WheelPos -= 170;
-    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    b = WheelPos * 3;
+    c = 255 - b;
+    a = 0;
   }
+
+  if (localBrightness > (640 - 100))
+    localBrightness = 640 - localBrightness;
+  else if (localBrightness > 100)
+    localBrightness = 100;
+
+  return strip.Color(brightness / 100 * localBrightness / 100 * a,
+                     brightness / 100 * localBrightness / 100 * b,
+                     brightness / 100 * localBrightness / 100 * c);
 }
 
 #define CDS_LENGTH 10
@@ -306,8 +328,28 @@ static int updateCDS() {
   return cds_mavg[cds_index(index - 1)]; // We +1'ed it before
 }
 
-static long updateVib() {
-  return pulseIn(VIB_PIN, HIGH);
+static void updateVib() {
+  long val = pulseIn(VIB_PIN, HIGH);
+#ifdef DEBUG
+  Serial.print("Vib : ");
+  Serial.println(val);
+#endif
+
+  if (val > VIB_THRESHOLD) {
+#ifdef DEBUG
+  Serial.println("Movement detected!");
+#endif
+    int prev_brightness = brightness;
+
+    for (; brightness >= 0; brightness--) {
+      redrawLEDs();
+      delay(5);
+    }
+
+    brightness = prev_brightness;
+
+    rainbowCycle(5);
+  }
 }
 
 void setup() {
@@ -322,7 +364,6 @@ void setup() {
   strip.show();
   
   testLEDs();
-  rainbowCycle(5);
 
   // Initialize vibration sensor
   pinMode(VIB_PIN, INPUT);
@@ -331,7 +372,6 @@ void setup() {
 void loop() {
   static int localMinutes = -1;
   int localBrightness, cds, sign, tmp;
-  int vib;
 
   updateRTC();
   if (localMinutes != minutes)
@@ -361,11 +401,7 @@ void loop() {
     }
   }
 
-  vib = updateVib();
-#ifdef DEBUG
-  Serial.print("Vib : ");
-  Serial.println(vib);
-#endif
+  updateVib();
 
   idleSleep(SLEEP_250MS);
 }
