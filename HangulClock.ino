@@ -335,5 +335,5 @@ void loop() {
   Serial.println(vib);
 #endif
 
-  idleSleep(SLEEP_500MS);
+  idleSleep(SLEEP_250MS);
 }
