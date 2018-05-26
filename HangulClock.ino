@@ -65,23 +65,10 @@ static void testLEDs() {
 }
 
 tmElements_t tm;
-int lastupdate = 0;
+int hours = -1;
+int minutes = -1;
+int seconds = -1;
 static void updateRTC() {
-#ifdef DEBUG
-  Serial.print("H: ");
-  Serial.print(hour());
-  Serial.print("\t");
-  Serial.print("M: ");
-  Serial.print(minute());
-  Serial.print("\t");
-  Serial.print("S: ");
-  Serial.print(second());
-  Serial.print("\n");
-#endif
-
-  if (lastupdate-- != 0)
-    return;
-
   while (!RTC.read(tm)) {
 #ifdef DEBUG
     if (RTC.chipPresent()) {
@@ -93,24 +80,27 @@ static void updateRTC() {
     idleSleep(SLEEP_500MS);
   }
 
+  hours = tm.Hour;
+  minutes = tm.Minute;
+  seconds = tm.Second;
+
 #ifdef DEBUG
-  Serial.println("Syncing Arduino time with RTC");
+  Serial.print("H: ");
+  Serial.print(hours);
+  Serial.print("\t");
+  Serial.print("M: ");
+  Serial.print(minutes);
+  Serial.print("\t");
+  Serial.print("S: ");
+  Serial.print(seconds);
+  Serial.print("\n");
 #endif
-
-  setTime(tm.Hour,
-          tm.Minute,
-          tm.Second,
-          tm.Day,
-          tm.Month,
-          tm.Year);
-
-  lastupdate = 60; // Sync every 60 seconds
 }
 
 static void updateHours() {
   int toUpdate[] = { -1, -1, 14 };
 
-  switch (hour() % 12) {
+  switch (hours % 12) {
   case 0:
     toUpdate[0] = 0;
     toUpdate[1] = 9;
@@ -167,9 +157,9 @@ static void updateHours() {
 static void updateMinutes() {
   int toUpdate[] = { -1, -1, -1, 24 };
 
-  switch (minute() / 5) {
+  switch (minutes / 5) {
   case 0:
-    if (hour() == 0) {
+    if (hours == 0) {
       toUpdate[0] = 18;
       toUpdate[1] = 19;
     }
@@ -303,7 +293,7 @@ void loop() {
   int localBrightness, cds, sign, tmp;
 
   updateRTC();
-  if (localMinutes != minute())
+  if (localMinutes != minutes)
     redrawLEDs();
 
   cds = updateCDS();
