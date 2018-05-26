@@ -22,7 +22,7 @@
 #define CDS_PIN A0
 #define CDS_THRESHOLD 50
 #define VIB_PIN 7
-#define VIB_THRESHOLD 10
+#define VIB_THRESHOLD 20
 #define BRIGHTNESS_CHG_THRES 30
 #define MAX_BRIGHTNESS 200
 #define DEBUG
@@ -329,7 +329,7 @@ static int updateCDS() {
 }
 
 static void updateVib() {
-  long val = pulseIn(VIB_PIN, HIGH);
+  long val = pulseIn(VIB_PIN, LOW);
 #ifdef DEBUG
   Serial.print("Vib : ");
   Serial.println(val);
