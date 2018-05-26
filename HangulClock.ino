@@ -21,6 +21,7 @@
 #define LED_PIN 6
 #define CDS_PIN A0
 #define CDS_THRESHOLD 50
+#define VIB_PIN 7
 #define BRIGHTNESS_CHG_THRES 30
 #define MAX_BRIGHTNESS 200
 #define DEBUG
@@ -274,6 +275,10 @@ static int updateCDS() {
   return cds_mavg[cds_index(index - 1)]; // We +1'ed it before
 }
 
+static long updateVib() {
+  return pulseIn(VIB_PIN, HIGH);
+}
+
 void setup() {
 #ifdef DEBUG
   Serial.begin(9600);
@@ -286,11 +291,15 @@ void setup() {
   strip.show();
   
   testLEDs();
+
+  // Initialize vibration sensor
+  pinMode(VIB_PIN, INPUT);
 }
 
 void loop() {
   static int localMinutes = -1;
   int localBrightness, cds, sign, tmp;
+  int vib;
 
   updateRTC();
   if (localMinutes != minutes)
@@ -319,6 +328,12 @@ void loop() {
       }
     }
   }
+
+  vib = updateVib();
+#ifdef DEBUG
+  Serial.print("Vib : ");
+  Serial.println(vib);
+#endif
 
   idleSleep(SLEEP_500MS);
 }
