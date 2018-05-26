@@ -349,6 +349,15 @@ static void updateVib() {
     brightness = prev_brightness;
 
     rainbowCycle(5);
+
+    prev_brightness = brightness;
+
+    for (brightness = 0; brightness < prev_brightness; brightness++) {
+      redrawLEDs();
+      delay(5);
+    }
+
+    brightness = prev_brightness;
   }
 }
 
