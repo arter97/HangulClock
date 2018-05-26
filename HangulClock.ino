@@ -18,11 +18,21 @@
 // Configurations
 #define LEDS 25
 #define LED_PIN 6
+#define CDS_PIN A0
+#define CDS_THRESHOLD 50
+#define BRIGHTNESS_CHG_THRES 30
 #define MAX_BRIGHTNESS 200
 #define DEBUG
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
 int brightness = MAX_BRIGHTNESS;
+
+static void redrawLEDs() {
+  clearLEDs(false);
+  updateHours();
+  updateMinutes();
+  strip.show();
+}
 
 static void clearLEDs(bool show) {
   for (int i = 0; i < LEDS; i++)
@@ -203,6 +213,59 @@ static void updateMinutes() {
   // strip.show() must be called by the caller
 }
 
+#define CDS_LENGTH 10
+static inline int cds_index(int index) {
+  if (index >= CDS_LENGTH)
+    return index - CDS_LENGTH;
+  if (index < 0)
+    return index + CDS_LENGTH;
+
+  return index;
+}
+static int updateCDS() {
+  static int cds[CDS_LENGTH] = { 0, };
+  static int cds_mavg[CDS_LENGTH] = { 0, };
+  static int index = 0;
+  int tmp, count;
+
+  cds[index] = analogRead(CDS_PIN);
+
+  cds_mavg[index] = 0;
+  count = 5;
+  for (int i = index - 4; i <= index; i++) {
+    if (cds[cds_index(i)] != 0)
+      cds_mavg[index] += cds[cds_index(i)];
+    else
+      count--;
+  }
+  cds_mavg[index] /= count;
+
+#ifdef DEBUG
+  Serial.print("CDS index : ");
+  Serial.println(index);
+  Serial.print("CDS : ");
+  Serial.println(cds[index]);
+  Serial.print("CDS_mavg : ");
+  for (int i = 0; i < CDS_LENGTH; i++) {
+    Serial.print(cds_mavg[i]);
+    Serial.print(", ");
+  }
+  Serial.println();
+  Serial.print("Last mavg : ");
+  Serial.println(cds_mavg[index]);
+#endif
+
+  tmp = cds[index] - cds_mavg[cds_index(index - 1)];
+
+  index = cds_index(index + 1);
+
+  if (tmp > CDS_THRESHOLD || tmp < -CDS_THRESHOLD)
+    return 0; // Ignore this noise
+
+  // Use cds_mavg[index] as the new brightness
+  return cds_mavg[cds_index(index - 1)]; // We +1'ed it before
+}
+
 void setup() {
 #ifdef DEBUG
   Serial.begin(9600);
@@ -219,13 +282,34 @@ void setup() {
 
 void loop() {
   static int localMinutes = -1;
+  int localBrightness, cds, sign, tmp;
 
   updateRTC();
-  if (localMinutes != minutes) {
-    clearLEDs(false);
-    updateHours();
-    updateMinutes();
-    strip.show();
+  if (localMinutes != minutes)
+    redrawLEDs();
+
+  cds = updateCDS();
+  if (cds > 0) {
+    localBrightness = (long)(1023 - cds) * MAX_BRIGHTNESS / 1023;
+    tmp = localBrightness - brightness;
+
+    if (tmp < -BRIGHTNESS_CHG_THRES ||
+        tmp >  BRIGHTNESS_CHG_THRES) {
+      if (tmp > 0)
+        sign = 1;
+      else
+        sign = -1;
+#ifdef DEBUG
+        Serial.print("Updating brightness from ");
+        Serial.print(brightness);
+        Serial.print(" to ");
+        Serial.println(localBrightness);
+#endif
+      for (; brightness != localBrightness; brightness += sign) {
+        redrawLEDs();
+        delay(25);
+      }
+    }
   }
 
   delay(500);
