@@ -270,9 +270,9 @@ static uint32_t Wheel(byte WheelPos, double localBrightness) {
   else if (localBrightness > 100)
     localBrightness = 100;
 
-  return strip.Color(brightness / 100 * localBrightness / 100 * a,
-                     brightness / 100 * localBrightness / 100 * b,
-                     brightness / 100 * localBrightness / 100 * c);
+  return strip.Color(((brightness * localBrightness) / (100 * MAX_BRIGHTNESS)) * a,
+                     ((brightness * localBrightness) / (100 * MAX_BRIGHTNESS)) * b,
+                     ((brightness * localBrightness) / (100 * MAX_BRIGHTNESS)) * c);
 }
 
 #define CDS_LENGTH 10
