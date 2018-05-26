@@ -222,6 +222,37 @@ static void updateMinutes() {
   // strip.show() must be called by the caller
 }
 
+const int heartLEDs[] = {
+       1,      3,
+   9,  8,  7,  6,  5,
+  10, 11, 12, 13, 14,
+      18, 17, 16,
+          22
+};
+// From https://kocoafab.cc/tutorial/view/228
+static void rainbowCycle(uint8_t wait) {
+  uint16_t i, j;
+
+  for (j = 0; j < 256 * 5; j++) {
+    for (i = 0; i < sizeof(heartLEDs) / sizeof(int); i++)
+      strip.setPixelColor(heartLEDs[i], Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+
+    strip.show();
+    delay(wait);
+  }
+}
+static uint32_t Wheel(byte WheelPos) {
+  if (WheelPos < 85) {
+    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  } else if (WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else {
+    WheelPos -= 170;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+}
+
 #define CDS_LENGTH 10
 static inline int cds_index(int index) {
   if (index >= CDS_LENGTH)
@@ -291,6 +322,7 @@ void setup() {
   strip.show();
   
   testLEDs();
+  rainbowCycle(5);
 
   // Initialize vibration sensor
   pinMode(VIB_PIN, INPUT);
