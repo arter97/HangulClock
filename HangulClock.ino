@@ -14,6 +14,7 @@
 #include <Time.h>
 #include <DS1307RTC.h>
 #include <Adafruit_NeoPixel.h>
+#include "LowPower.h"
 
 // Configurations
 #define LEDS 25
@@ -26,6 +27,11 @@
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
 int brightness = MAX_BRIGHTNESS;
+
+static void idleSleep(enum period_t period) {
+  LowPower.idle(period, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_OFF,
+                SPI_OFF, USART0_OFF, TWI_OFF);
+}
 
 static void redrawLEDs() {
   clearLEDs(false);
@@ -81,7 +87,7 @@ static void updateRTC() {
       Serial.println("DS1307 RTC not found!");
     }
 #endif
-    delay(500);
+    idleSleep(SLEEP_500MS);
   }
 
 #ifdef DEBUG
@@ -321,5 +327,5 @@ void loop() {
     }
   }
 
-  delay(500);
+  idleSleep(SLEEP_500MS);
 }
