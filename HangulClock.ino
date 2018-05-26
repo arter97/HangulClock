@@ -153,9 +153,8 @@ static void updateMinutes() {
     if (hours == 0) {
       toUpdate[0] = 18;
       toUpdate[1] = 19;
-      toUpdate[2] = -1;
-      toUpdate[3] = -1;
     }
+    toUpdate[3] = -1;
     break;
   case 1: // 5
     toUpdate[0] = 23;
