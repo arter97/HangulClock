@@ -30,6 +30,8 @@
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDS, LED_PIN, NEO_GRBW + NEO_KHZ800);
 int brightness = MAX_BRIGHTNESS;
+bool prevLEDs[LEDS];
+bool curLEDs[LEDS];
 
 static void idleSleep(enum period_t period) {
 #ifdef DEBUG
@@ -39,11 +41,57 @@ static void idleSleep(enum period_t period) {
                 SPI_OFF, USART0_OFF, TWI_OFF);
 }
 
+static void resetCurLEDs() {
+  memset(curLEDs, 0, sizeof(curLEDs));
+}
+
 static void redrawLEDs() {
+  int i, j;
+  bool toFadeOut[LEDS] = { false, };
+  bool toFadeIn[LEDS] = { false, };
+
   clearLEDs(false);
+  memcpy(prevLEDs, curLEDs, sizeof(curLEDs));
+  resetCurLEDs();
   updateHours();
   updateMinutes();
-  strip.show();
+
+  for (i = 0; i < LEDS; i++) {
+    if (curLEDs[i])
+      strip.setPixelColor(i, 0, 0, 0, brightness);
+    else
+      strip.setPixelColor(i, 0, 0, 0, 0);
+  }
+
+  // Fade in & out LED differences
+  if (memcmp(prevLEDs, curLEDs, sizeof(curLEDs))) {
+    for (i = 0; i < sizeof(curLEDs) / sizeof(bool); i++) {
+      if (prevLEDs[i] != curLEDs[i]) {
+        if (prevLEDs[i] == false) {
+          // Fade in
+          toFadeIn[i] = true;
+        } else {
+          // Fade out
+          toFadeOut[i] = true;
+        }
+      }
+    }
+
+    for (i = 0; i <= brightness; i++) {
+      for (j = 0; j < LEDS; j++) {
+        if (toFadeOut[j])
+          strip.setPixelColor(j, 0, 0, 0, brightness - i);
+      }
+      for (j = 0; j < LEDS; j++) {
+        if (toFadeIn[j])
+          strip.setPixelColor(j, 0, 0, 0, i);
+      }
+      strip.show();
+      delay(1);
+    }
+  } else {
+    strip.show();
+  }
 }
 
 static void clearLEDs(bool show) {
@@ -71,7 +119,19 @@ tmElements_t tm;
 int hours = -1;
 int minutes = -1;
 int seconds = -1;
+//#define TESTING
+
 static void updateRTC() {
+#ifdef TESTING
+  static int tmp = 0;
+
+  if (tmp > 720)
+    tmp = 0;
+
+  hours = tmp / 60;
+  minutes = tmp % 60;
+  tmp++;
+#else
   while (!RTC.read(tm)) {
 #ifdef DEBUG
     if (RTC.chipPresent()) {
@@ -86,6 +146,7 @@ static void updateRTC() {
   hours = tm.Hour;
   minutes = tm.Minute;
   seconds = tm.Second;
+#endif
 
 #ifdef DEBUG
   Serial.print("H: ");
@@ -151,7 +212,7 @@ static void updateHours() {
 
   for (int i = 0; i < sizeof(toUpdate) / sizeof(int); i++) {
     if (toUpdate[i] != -1)
-      strip.setPixelColor(toUpdate[i], 0, 0, 0, brightness);
+      curLEDs[toUpdate[i]] = true;
   }
 
   // strip.show() must be called by the caller
@@ -218,7 +279,7 @@ static void updateMinutes() {
 
   for (int i = 0; i < sizeof(toUpdate) / sizeof(int); i++) {
     if (toUpdate[i] != -1)
-      strip.setPixelColor(toUpdate[i], 0, 0, 0, brightness);
+      curLEDs[toUpdate[i]] = true;
   }
 
   // strip.show() must be called by the caller
@@ -397,6 +458,7 @@ void setup() {
   // Initialize LEDs
   strip.begin();
   strip.show();
+  resetCurLEDs();
   
   testLEDs();
 
