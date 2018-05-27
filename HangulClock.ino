@@ -47,8 +47,8 @@ static void resetCurLEDs() {
 
 static void redrawLEDs() {
   int i, j;
-  bool toFadeOut[LEDS] = { false, };
-  bool toFadeIn[LEDS] = { false, };
+  bool toFadeOut[LEDS];
+  bool toFadeIn[LEDS];
 
   clearLEDs(false);
   memcpy(prevLEDs, curLEDs, sizeof(curLEDs));
@@ -65,6 +65,8 @@ static void redrawLEDs() {
 
   // Fade in & out LED differences
   if (memcmp(prevLEDs, curLEDs, sizeof(curLEDs))) {
+    memset(toFadeOut, 0, sizeof(toFadeOut));
+    memset(toFadeIn, 0, sizeof(toFadeIn));
     for (i = 0; i < sizeof(curLEDs) / sizeof(bool); i++) {
       if (prevLEDs[i] != curLEDs[i]) {
         if (prevLEDs[i] == false) {
