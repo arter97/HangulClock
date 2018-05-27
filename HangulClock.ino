@@ -14,6 +14,7 @@
 #include <Time.h>
 #include <DS1307RTC.h>
 #include <Adafruit_NeoPixel.h>
+#include <avr/power.h>
 #include "LowPower.h"
 
 // Configurations
@@ -37,7 +38,8 @@ static void idleSleep(enum period_t period) {
 #ifdef DEBUG
   Serial.flush();
 #endif
-  LowPower.idle(period, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_OFF,
+  // Passing ADC_OFF makes LowPower turning ADC back on upon resume
+  LowPower.idle(period, ADC_ON, TIMER2_OFF, TIMER1_OFF, TIMER0_OFF,
                 SPI_OFF, USART0_OFF, TWI_OFF);
 }
 
@@ -354,7 +356,9 @@ static int updateCDS() {
   static int index = 0;
   int tmp, count;
 
+  power_adc_enable();
   cds[index] = analogRead(CDS_PIN);
+  power_adc_disable();
 
   cds_mavg[index] = 0;
   count = 5;
@@ -467,6 +471,9 @@ void setup() {
   // Initialize vibration sensor
   pinMode(VIB_PIN, INPUT);
   pinMode(SWITCH_A, INPUT_PULLUP);
+
+  // Enable ADC only when required
+  power_adc_disable();
 }
 
 void loop() {
