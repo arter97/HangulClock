@@ -23,6 +23,7 @@
 #define CDS_THRESHOLD 50
 #define VIB_PIN 7
 #define VIB_THRESHOLD 20
+#define SWITCH_A 4
 #define BRIGHTNESS_CHG_THRES 30
 #define MAX_BRIGHTNESS 200
 #define DEBUG
@@ -361,6 +362,31 @@ static void updateVib() {
   }
 }
 
+void(*resetFunc) (void) = 0; //declare reset function @ address 0
+static void updateSwitch() {
+  static int activated = 0;
+  if (digitalRead(SWITCH_A) == LOW) {
+#ifdef DEBUG
+    Serial.println("Switch A activated");
+#endif
+    activated++;
+
+    if (activated == 3) {
+      // Reset RTC
+      tmElements_t tml;
+      memset(&tml, 0, sizeof(tmElements_t));
+      RTC.write(tml);
+#ifdef DEBUG
+      Serial.println("RTC reset! Rebooting...");
+      Serial.flush();
+#endif
+      resetFunc();
+    }
+  } else {
+    activated = 0;
+  }
+}
+
 void setup() {
 #ifdef DEBUG
   Serial.begin(9600);
@@ -376,6 +402,7 @@ void setup() {
 
   // Initialize vibration sensor
   pinMode(VIB_PIN, INPUT);
+  pinMode(SWITCH_A, INPUT_PULLUP);
 }
 
 void loop() {
@@ -411,6 +438,7 @@ void loop() {
   }
 
   updateVib();
+  updateSwitch();
 
   idleSleep(SLEEP_250MS);
 }
