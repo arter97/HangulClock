@@ -240,8 +240,8 @@ static void updateMinutes() {
     toUpdate[1] = 23;
     break;
   case 4: // 20
-    toUpdate[0] = 22;
-    toUpdate[1] = 23;
+    toUpdate[0] = 17;
+    toUpdate[1] = 22;
     break;
   case 5: // 25
     toUpdate[0] = 17;
